@@ -1,12 +1,13 @@
 import {resolve} from "path";
 import * as cdk from '@aws-cdk/core';
+import { Duration } from '@aws-cdk/core';
 import { NodejsFunction } from "@aws-cdk/aws-lambda-nodejs";
 import { LambdaRestApi } from "@aws-cdk/aws-apigateway";
 import { Queue } from "@aws-cdk/aws-sqs";
 import { PolicyStatement } from "@aws-cdk/aws-iam";
 import { Bucket, BucketAccessControl } from "@aws-cdk/aws-s3";
 import { SqsEventSource } from "@aws-cdk/aws-lambda-event-sources";
-import { Duration } from "@aws-cdk/core";
+import { StringParameter } from "@aws-cdk/aws-ssm";
 
 export class HealthLoggerStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -39,6 +40,11 @@ export class HealthLoggerStack extends cdk.Stack {
 
     const bucket = new Bucket(this, "HealthLoggerData", {
       accessControl: BucketAccessControl.PRIVATE,
+    });
+
+    new StringParameter(this, "HealthLoggerDataBucketName", {
+      parameterName: "HealthLoggerDataBucketName",
+      stringValue: bucket.bucketName
     });
 
     const slackAuthToken = this.node.tryGetContext('slack_auth_token');
