@@ -62,7 +62,7 @@ const uploadFromStream = (
   const promise = s3
     .upload({
       Bucket: bucket,
-      Key: fileName,
+      Key: `master/${fileName}`,
       ContentType: fileResponse.headers['content-type'],
       ContentLength: fileResponse.headers['content-length'],
       Body: passThrough,

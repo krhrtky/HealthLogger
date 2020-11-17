@@ -1,12 +1,12 @@
-import {resolve} from "path";
+import { resolve } from "path";
 import * as cdk from '@aws-cdk/core';
 import { Duration } from '@aws-cdk/core';
 import { NodejsFunction } from "@aws-cdk/aws-lambda-nodejs";
 import { LambdaRestApi } from "@aws-cdk/aws-apigateway";
 import { Queue } from "@aws-cdk/aws-sqs";
 import { PolicyStatement } from "@aws-cdk/aws-iam";
-import { Bucket, BucketAccessControl } from "@aws-cdk/aws-s3";
-import { SqsEventSource } from "@aws-cdk/aws-lambda-event-sources";
+import { Bucket, BucketAccessControl, EventType } from "@aws-cdk/aws-s3";
+import { S3EventSource, SqsEventSource } from "@aws-cdk/aws-lambda-event-sources";
 import { StringParameter } from "@aws-cdk/aws-ssm";
 
 export class HealthLoggerStack extends cdk.Stack {
@@ -64,6 +64,21 @@ export class HealthLoggerStack extends cdk.Stack {
     });
 
     fileUploadToS3Handler.addEventSource(new SqsEventSource(queue));
+
+    const convertToCSVHandler = new NodejsFunction(this, 'ConvertToCSVHandler', {
+      entry: resolve(__dirname, './lambda/ConvertToCSVHandler.ts'),
+    });
+
+    convertToCSVHandler.addEventSource(new S3EventSource(
+      bucket,
+      {
+        events: [EventType.OBJECT_CREATED_PUT],
+        filters: [{
+          prefix: "master/",
+          suffix: "zip",
+        }]
+      }
+    ));
 
     new cdk.CfnOutput(this, "FileUploadEventSubscribeAPI", {
       value: api.url,
