@@ -8,6 +8,9 @@ import { PolicyStatement } from "@aws-cdk/aws-iam";
 import { Bucket, BucketAccessControl, EventType } from "@aws-cdk/aws-s3";
 import { S3EventSource, SqsEventSource } from "@aws-cdk/aws-lambda-event-sources";
 import { StringParameter } from "@aws-cdk/aws-ssm";
+import { DockerImageAsset } from "@aws-cdk/aws-ecr-assets";
+import { Cluster, ContainerImage, FargateTaskDefinition } from "@aws-cdk/aws-ecs";
+import { Vpc } from "@aws-cdk/aws-ec2";
 
 export class HealthLoggerStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -63,10 +66,53 @@ export class HealthLoggerStack extends cdk.Stack {
       ],
     });
 
+    const vpc = new Vpc(this, "XmlToCsvConverterVpc", { maxAzs: 1 });
+    const cluster = new Cluster(this, "XmlToCsvConverterCluster", { vpc });
+
+    const taskDef = new FargateTaskDefinition(this, "XmlToCsvConverterTask", {
+      cpu: 1024,
+      memoryLimitMiB: 5120,
+    });
+
+    taskDef.addToTaskRolePolicy(
+      new PolicyStatement({
+        actions: ["s3:PutObject", "s3:GetObject"],
+        resources: [bucket.bucketArn, `${bucket.bucketArn}/*`],
+      })
+    )
+
+    const imageAsset = new DockerImageAsset(this, "XmlToCsvConverter", {
+      directory: resolve(__dirname, "../xml-to-csv-converter"),
+    });
+
+    const container = taskDef.addContainer("XmlToCsvConverterContainer", {
+      image: ContainerImage.fromDockerImageAsset(imageAsset),
+    });
+
     fileUploadToS3Handler.addEventSource(new SqsEventSource(queue));
 
     const convertToCSVHandler = new NodejsFunction(this, 'ConvertToCSVHandler', {
       entry: resolve(__dirname, './lambda/ConvertToCSVHandler.ts'),
+      initialPolicy: [
+        new PolicyStatement({
+          actions: ["ecs:RunTask"],
+          resources: [taskDef.taskDefinitionArn],
+        }),
+        new PolicyStatement({
+          actions: ["ecs:StopTask"],
+          resources: [taskDef.taskDefinitionArn],
+        }),
+        new PolicyStatement({
+          actions: ["iam:PassRole"],
+          resources: ["*"],
+        }),
+      ],
+      environment: {
+        CLUSTER_NAME: cluster.clusterName,
+        TASK_DEF_ARN: taskDef.taskDefinitionArn,
+        CONTAINER_NAME: container.containerName,
+        VPC_SUBNET: vpc.publicSubnets[0].subnetId,
+      },
     });
 
     convertToCSVHandler.addEventSource(new S3EventSource(
