@@ -41,18 +41,5 @@
     "aws-xray-sdk": "^3.2.0",
     "axios": "^0.21.0",
     "source-map-support": "^0.5.19"
-  },
-  "targets": {
-    "cdk-lambda": {
-      "context": "node",
-      "includeNodeModules": {
-        "aws-sdk": false
-      },
-      "sourceMap": false,
-      "minify": false,
-      "engines": {
-        "node": ">= 12"
-      }
-    }
   }
 }

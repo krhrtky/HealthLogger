@@ -34,7 +34,7 @@ export const handler: S3Handler = async (event, _, callback) => {
                 value: event.Records[0].s3.object.key,
               }
             ],
-            command: ["./gradlew", "run"],
+            command: ["java", "-jar", "./build/libs/xml-to-csv-converter-1.0-SNAPSHOT.jar"],
             name: containerName,
           }
         ],

@@ -41,7 +41,7 @@ class XmlToRecordsParser {
                     bodyTemperatures.add(tags.item(index).convertToBodyTemperature())
 
                 else -> {
-                    logger.info("Type not match. attribute: ${tags.item(index).attributes.getNamedItem("type")}")
+                    logger.debug("Type not match. attribute: ${tags.item(index).attributes.getNamedItem("type")}")
                 }
             }
         }
