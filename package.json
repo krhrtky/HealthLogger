@@ -38,7 +38,21 @@
     "@slack/web-api": "^5.13.0",
     "aws-lambda": "^1.0.6",
     "aws-sdk": "^2.783.0",
+    "aws-xray-sdk": "^3.2.0",
     "axios": "^0.21.0",
     "source-map-support": "^0.5.19"
+  },
+  "targets": {
+    "cdk-lambda": {
+      "context": "node",
+      "includeNodeModules": {
+        "aws-sdk": false
+      },
+      "sourceMap": false,
+      "minify": false,
+      "engines": {
+        "node": ">= 12"
+      }
+    }
   }
 }

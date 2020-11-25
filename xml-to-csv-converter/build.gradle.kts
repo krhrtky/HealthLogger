@@ -11,6 +11,7 @@ repositories {
     mavenCentral()
 }
 dependencies {
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("software.amazon.awssdk:bom:2.+")
     implementation("software.amazon.awssdk:s3:2.+")
     implementation("software.amazon.awssdk:ssm:2.+")
@@ -26,4 +27,12 @@ tasks.withType<KotlinCompile>() {
 }
 application {
     mainClassName = "MainKt"
+}
+
+tasks.jar {
+    from(
+            configurations.runtimeClasspath.get().map {
+                if (it.isDirectory) it else zipTree(it)
+            }
+    )
 }

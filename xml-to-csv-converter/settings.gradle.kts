@@ -1,3 +1,3 @@
 
-rootProject.name = "xmlparser"
+rootProject.name = "xml-to-csv-converter"
 

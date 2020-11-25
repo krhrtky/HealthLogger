@@ -1,5 +1,8 @@
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
-import { SQS } from "aws-sdk";
+import * as XRay from "aws-xray-sdk";
+import * as SDK from "aws-sdk";
+
+const AWS = XRay.captureAWS(SDK);
 
 export const handler: APIGatewayProxyHandlerV2 = async (event) => {
   console.log(JSON.stringify(event.body, null, 2));
@@ -22,7 +25,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
 
   const queueUrl = process.env.QUEUE_URL ?? "";
 
-  const sqs = new SQS();
+  const sqs = new AWS.SQS();
 
   try {
     await sqs.sendMessage({

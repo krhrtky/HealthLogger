@@ -1,6 +1,7 @@
 package lib.aws
 
 import org.slf4j.LoggerFactory
+import software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
@@ -14,10 +15,14 @@ class S3Uploader {
     private val s3Client = S3Client
         .builder()
         .region(Region.US_EAST_1)
-        .credentialsProvider(ProfileCredentialsProvider.create())
+        .credentialsProvider(ContainerCredentialsProvider.builder().build())
         .build()
 
-    private val ssmClient = SsmClient.builder().build()
+    private val ssmClient = SsmClient
+            .builder()
+            .region(Region.US_EAST_1)
+            .credentialsProvider(ContainerCredentialsProvider.builder().build())
+            .build()
 
     fun upload(pathName: String, fileName: String, file: File) {
         val bucketName = ssmClient.getParameter(GetParameterRequest.builder().name("HealthLoggerDataBucketName").build())

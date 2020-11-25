@@ -1,9 +1,11 @@
 import { PassThrough } from "stream";
 import { SQSHandler } from "aws-lambda";
 import { WebClient } from "@slack/web-api";
-import { S3 } from "aws-sdk";
+import * as XRay from "aws-xray-sdk";
+import * as SDK from "aws-sdk";
 import { WebAPICallResult } from "@slack/web-api/dist/WebClient";
 import { AxiosResponse, default as axios } from "axios";
+import type { S3 } from "aws-sdk";
 
 type FileAPICallResult = {
   files: Array<{
@@ -54,7 +56,7 @@ const uploadFromStream = (
   fileName: string,
   bucket: string,
 ): { passThrough: PassThrough; promise: Promise<S3.ManagedUpload.SendData> } => {
-  const s3 = new S3();
+  const s3 = new AWS.S3();
   const passThrough = new PassThrough();
 
   console.log(`Upload to S3. bucket name: ${bucket}, file name: ${fileName}`);
@@ -71,7 +73,9 @@ const uploadFromStream = (
   return { passThrough, promise };
 };
 
-export const handler: SQSHandler = async (event, _, callback) => {
+const AWS = XRay.captureAWS(SDK);
+
+export const handler: SQSHandler = async (event, context, callback) => {
   console.log(JSON.stringify(event.Records, null, 2));
 
   const slackAuthToken = process.env.SLACK_AUTH_TOKEN ?? "";
@@ -86,6 +90,16 @@ export const handler: SQSHandler = async (event, _, callback) => {
     console.log(JSON.stringify(result, null, 2));
 
     for (const record of event.Records) {
+
+      const traceData = XRay.utils.processTraceData(record.attributes.AWSTraceHeader);
+      const segment = XRay.getSegment();
+
+      if (segment instanceof XRay.Segment) {
+        segment.trace_id = traceData.root;
+        segment.parent_id = traceData.parent;
+        segment.flush()
+      }
+
       const queue = JSON.parse(record.body) as QueueRecord;
 
       const maybeFile = result.files.find(file => file.id === queue.fileId);

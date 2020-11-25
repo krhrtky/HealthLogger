@@ -1,5 +1,8 @@
 import { S3Handler } from "aws-lambda";
-import { ECS } from "aws-sdk";
+import * as XRay from "aws-xray-sdk";
+import * as SDK from "aws-sdk";
+
+const AWS = XRay.captureAWS(SDK);
 
 export const handler: S3Handler = async (event, _, callback) => {
   console.log(JSON.stringify(event))
@@ -9,7 +12,7 @@ export const handler: S3Handler = async (event, _, callback) => {
   const containerName = process.env.CONTAINER_NAME || "";
   const subnetId = process.env.VPC_SUBNET || "";
 
-  const ecs = new ECS();
+  const ecs = new AWS.ECS();
 
   try {
     await ecs.runTask({
@@ -31,7 +34,7 @@ export const handler: S3Handler = async (event, _, callback) => {
                 value: event.Records[0].s3.object.key,
               }
             ],
-            command: ["java", "jar", "./build/libs/xmlparser-1.0-SNAPSHOT.jar"],
+            command: ["./gradlew", "run"],
             name: containerName,
           }
         ],

@@ -9,8 +9,9 @@ import { Bucket, BucketAccessControl, EventType } from "@aws-cdk/aws-s3";
 import { S3EventSource, SqsEventSource } from "@aws-cdk/aws-lambda-event-sources";
 import { StringParameter } from "@aws-cdk/aws-ssm";
 import { DockerImageAsset } from "@aws-cdk/aws-ecr-assets";
-import { Cluster, ContainerImage, FargateTaskDefinition } from "@aws-cdk/aws-ecs";
+import { Cluster, ContainerImage, FargateTaskDefinition, LogDriver } from "@aws-cdk/aws-ecs";
 import { Vpc } from "@aws-cdk/aws-ec2";
+import { Tracing } from "@aws-cdk/aws-lambda";
 
 export class HealthLoggerStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -31,6 +32,7 @@ export class HealthLoggerStack extends cdk.Stack {
           resources: [queue.queueArn],
         })
       ],
+      tracing: Tracing.ACTIVE,
     });
 
     const api = new LambdaRestApi(this, 'FileUploadEventAPI', {
@@ -43,9 +45,10 @@ export class HealthLoggerStack extends cdk.Stack {
 
     const bucket = new Bucket(this, "HealthLoggerData", {
       accessControl: BucketAccessControl.PRIVATE,
+      lifecycleRules: [{ expiration: Duration.days(7)}],
     });
 
-    new StringParameter(this, "HealthLoggerDataBucketName", {
+    const ssm = new StringParameter(this, "HealthLoggerDataBucketName", {
       parameterName: "HealthLoggerDataBucketName",
       stringValue: bucket.bucketName
     });
@@ -53,6 +56,7 @@ export class HealthLoggerStack extends cdk.Stack {
     const slackAuthToken = this.node.tryGetContext('slack_auth_token');
 
     const fileUploadToS3Handler = new NodejsFunction(this, 'FileUploadToS3Handler', {
+      functionName: "FileUploadToS3Handler",
       entry: resolve(__dirname, './lambda/FileUploadToS3Handler.ts'),
       environment: {
         SLACK_AUTH_TOKEN: slackAuthToken,
@@ -64,6 +68,7 @@ export class HealthLoggerStack extends cdk.Stack {
           resources: [bucket.bucketArn, `${bucket.bucketArn}/*`],
         })
       ],
+      tracing: Tracing.ACTIVE,
     });
 
     const vpc = new Vpc(this, "XmlToCsvConverterVpc", { maxAzs: 1 });
@@ -78,8 +83,15 @@ export class HealthLoggerStack extends cdk.Stack {
       new PolicyStatement({
         actions: ["s3:PutObject", "s3:GetObject"],
         resources: [bucket.bucketArn, `${bucket.bucketArn}/*`],
-      })
-    )
+      }),
+    );
+
+    taskDef.addToTaskRolePolicy(
+      new PolicyStatement({
+        actions: ["ssm:GetParameter"],
+        resources: [ssm.parameterArn],
+      }),
+    );
 
     const imageAsset = new DockerImageAsset(this, "XmlToCsvConverter", {
       directory: resolve(__dirname, "../xml-to-csv-converter"),
@@ -87,6 +99,7 @@ export class HealthLoggerStack extends cdk.Stack {
 
     const container = taskDef.addContainer("XmlToCsvConverterContainer", {
       image: ContainerImage.fromDockerImageAsset(imageAsset),
+      logging: LogDriver.awsLogs({ streamPrefix: "XmlToCsvConverter" })
     });
 
     fileUploadToS3Handler.addEventSource(new SqsEventSource(queue));
@@ -113,6 +126,7 @@ export class HealthLoggerStack extends cdk.Stack {
         CONTAINER_NAME: container.containerName,
         VPC_SUBNET: vpc.publicSubnets[0].subnetId,
       },
+      tracing: Tracing.ACTIVE,
     });
 
     convertToCSVHandler.addEventSource(new S3EventSource(
