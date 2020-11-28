@@ -72,7 +72,10 @@ export class HealthLoggerStack extends cdk.Stack {
     });
 
     const vpc = new Vpc(this, "XmlToCsvConverterVpc", { maxAzs: 1 });
-    const cluster = new Cluster(this, "XmlToCsvConverterCluster", { vpc });
+    const cluster = new Cluster(this, "XmlToCsvConverterCluster", {
+      vpc,
+      containerInsights: true,
+    });
 
     const taskDef = new FargateTaskDefinition(this, "XmlToCsvConverterTask", {
       cpu: 1024,
