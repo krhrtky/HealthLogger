@@ -97,7 +97,8 @@ export class HealthLoggerStack extends cdk.Stack {
     );
 
     const imageAsset = new DockerImageAsset(this, "XmlToCsvConverter", {
-      directory: resolve(__dirname, "../xml-to-csv-converter"),
+      directory: resolve(__dirname, "../xml-handler"),
+      file: "xml-to-csv-converter_Dockerfile"
     });
 
     const container = taskDef.addContainer("XmlToCsvConverterContainer", {

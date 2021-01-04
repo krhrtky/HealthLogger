@@ -1,9 +1,9 @@
-package lib.record
+package com.healthlogger.libs
 
+import com.healthlogger.libs.model.BodyTemperature
+import com.healthlogger.libs.model.StepCount
 import com.opencsv.CSVWriter
 import com.opencsv.bean.StatefulBeanToCsvBuilder
-import lib.record.model.BodyTemperature
-import lib.record.model.StepCount
 import java.io.File
 
 class RecordsToCsvConverter {

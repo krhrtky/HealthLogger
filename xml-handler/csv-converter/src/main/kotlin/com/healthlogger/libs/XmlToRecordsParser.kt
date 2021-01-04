@@ -1,8 +1,8 @@
-package lib.record
+package com.healthlogger.libs
 
-import lib.record.model.BodyTemperature
-import lib.record.model.Records
-import lib.record.model.StepCount
+import com.healthlogger.libs.model.BodyTemperature
+import com.healthlogger.libs.model.Records
+import com.healthlogger.libs.model.StepCount
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import org.slf4j.LoggerFactory
