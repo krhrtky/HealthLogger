@@ -1,4 +1,3 @@
 package com.healthlogger.entities.stepcount
 
-class StepCounts {
-}
+class StepCounts(val list: List<StepCount>): List<StepCount> by list
