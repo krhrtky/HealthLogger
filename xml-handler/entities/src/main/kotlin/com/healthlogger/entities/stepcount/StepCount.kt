@@ -7,6 +7,11 @@ class StepCount(
     val startDate: StartDate,
     val endDate: EndDate,
 ) {
+
+    fun isAfter(stepCount: StepCount): Boolean = creationDate
+        .value
+        .isAfter(stepCount.creationDate.value)
+
     override fun equals(other: Any?): Boolean {
         if (other is StepCount) {
             return value.value == other.value.value
@@ -25,5 +30,9 @@ class StepCount(
         result = 31 * result + startDate.hashCode()
         result = 31 * result + endDate.hashCode()
         return result
+    }
+
+    override fun toString(): String {
+        return "StepCount(value=$value, unit=$unit, creationDate=$creationDate, startDate=$startDate, endDate=$endDate)"
     }
 }

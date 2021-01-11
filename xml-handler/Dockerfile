@@ -2,8 +2,7 @@ FROM adoptopenjdk/openjdk11:alpine
 
 RUN mkdir ./app
 
-COPY ./csv-converter ./csv-converter
-COPY ./xml-to-csv-converter ./app
+COPY . ./app
 
 WORKDIR ./app
 

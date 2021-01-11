@@ -6,16 +6,16 @@ import java.util.Date
 
 data class StepCount(
     @CsvBindByName(column = "value", required = true)
-    val value: Int,
+    var value: Int? = null,
     @CsvBindByName(column = "unit", required = true)
-    val unit: String,
+    var unit: String? = null,
     @CsvDate("yyyy-MM-dd HH:mm:ss ZZ")
     @CsvBindByName(column = "creationDate", required = true)
-    val creationDate: Date,
+    var creationDate: Date? = null,
     @CsvDate("yyyy-MM-dd HH:mm:ss ZZ")
     @CsvBindByName(column = "startDate", required = true)
-    val startDate: Date,
+    var startDate: Date? = null,
     @CsvDate("yyyy-MM-dd HH:mm:ss ZZ")
     @CsvBindByName(column = "endDate", required = true)
-    val endDate: Date,
+    var endDate: Date? = null,
 )

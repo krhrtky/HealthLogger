@@ -8,8 +8,10 @@ application {
 }
 
 dependencies {
+    implementation(project(":entities"))
     implementation(project(":csv-converter"))
     implementation(project(":s3-connector"))
+    implementation(project(":dynamo-db-connector"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("org.slf4j:slf4j-api:1+")
     implementation("ch.qos.logback:logback-classic:1+")

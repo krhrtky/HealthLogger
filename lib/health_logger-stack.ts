@@ -12,6 +12,7 @@ import { DockerImageAsset } from "@aws-cdk/aws-ecr-assets";
 import { Cluster, ContainerImage, FargateTaskDefinition, LogDriver } from "@aws-cdk/aws-ecs";
 import { Vpc } from "@aws-cdk/aws-ec2";
 import { Tracing } from "@aws-cdk/aws-lambda";
+import { AttributeType, BillingMode, Table } from "@aws-cdk/aws-dynamodb";
 
 export class HealthLoggerStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -48,6 +49,19 @@ export class HealthLoggerStack extends cdk.Stack {
       lifecycleRules: [{ expiration: Duration.days(7)}],
     });
 
+    const dynamoDB = new Table(this, "StepCount", {
+      tableName: "StepCount",
+      partitionKey: {
+        name: "startDate",
+        type: AttributeType.NUMBER,
+      },
+      sortKey: {
+        name: "creationDate",
+        type: AttributeType.NUMBER,
+      },
+      billingMode: BillingMode.PAY_PER_REQUEST,
+    });
+
     const ssm = new StringParameter(this, "HealthLoggerDataBucketName", {
       parameterName: "HealthLoggerDataBucketName",
       stringValue: bucket.bucketName
@@ -71,37 +85,39 @@ export class HealthLoggerStack extends cdk.Stack {
       tracing: Tracing.ACTIVE,
     });
 
+    const imageAsset = new DockerImageAsset(this, "XmlHandler", {
+      directory: resolve(__dirname, "../xml-handler"),
+    });
+
+    /*
+     * CSV Converter Task
+     */
     const vpc = new Vpc(this, "XmlToCsvConverterVpc", { maxAzs: 1 });
     const cluster = new Cluster(this, "XmlToCsvConverterCluster", {
       vpc,
       containerInsights: true,
     });
 
-    const taskDef = new FargateTaskDefinition(this, "XmlToCsvConverterTask", {
+    const converterTaskDef = new FargateTaskDefinition(this, "XmlToCsvConverterTask", {
       cpu: 1024,
       memoryLimitMiB: 5120,
     });
 
-    taskDef.addToTaskRolePolicy(
+    converterTaskDef.addToTaskRolePolicy(
       new PolicyStatement({
         actions: ["s3:PutObject", "s3:GetObject"],
         resources: [bucket.bucketArn, `${bucket.bucketArn}/*`],
       }),
     );
 
-    taskDef.addToTaskRolePolicy(
+    converterTaskDef.addToTaskRolePolicy(
       new PolicyStatement({
         actions: ["ssm:GetParameter"],
         resources: [ssm.parameterArn],
       }),
     );
 
-    const imageAsset = new DockerImageAsset(this, "XmlToCsvConverter", {
-      directory: resolve(__dirname, "../xml-handler"),
-      file: "xml-to-csv-converter_Dockerfile"
-    });
-
-    const container = taskDef.addContainer("XmlToCsvConverterContainer", {
+    const converterContainer = converterTaskDef.addContainer("XmlToCsvConverterContainer", {
       image: ContainerImage.fromDockerImageAsset(imageAsset),
       logging: LogDriver.awsLogs({ streamPrefix: "XmlToCsvConverter" })
     });
@@ -113,11 +129,11 @@ export class HealthLoggerStack extends cdk.Stack {
       initialPolicy: [
         new PolicyStatement({
           actions: ["ecs:RunTask"],
-          resources: [taskDef.taskDefinitionArn],
+          resources: [converterTaskDef.taskDefinitionArn],
         }),
         new PolicyStatement({
           actions: ["ecs:StopTask"],
-          resources: [taskDef.taskDefinitionArn],
+          resources: [converterTaskDef.taskDefinitionArn],
         }),
         new PolicyStatement({
           actions: ["iam:PassRole"],
@@ -126,8 +142,8 @@ export class HealthLoggerStack extends cdk.Stack {
       ],
       environment: {
         CLUSTER_NAME: cluster.clusterName,
-        TASK_DEF_ARN: taskDef.taskDefinitionArn,
-        CONTAINER_NAME: container.containerName,
+        TASK_DEF_ARN: converterTaskDef.taskDefinitionArn,
+        CONTAINER_NAME: converterContainer.containerName,
         VPC_SUBNET: vpc.publicSubnets[0].subnetId,
       },
       tracing: Tracing.ACTIVE,
@@ -140,6 +156,81 @@ export class HealthLoggerStack extends cdk.Stack {
         filters: [{
           prefix: "master/",
           suffix: "zip",
+        }]
+      }
+    ));
+
+    /*
+     * Save to DB Task
+     */
+    const saveToDBVpc = new Vpc(this, "SaveToDBVpc", { maxAzs: 1 });
+    const saveToDBCluster = new Cluster(this, "SaveToDBCluster", {
+      vpc: saveToDBVpc,
+      containerInsights: true,
+    });
+
+    const saveToDBTaskDef = new FargateTaskDefinition(this, "SaveToDBTask", {
+      cpu: 1024,
+      memoryLimitMiB: 5120,
+    });
+
+    saveToDBTaskDef.addToTaskRolePolicy(
+      new PolicyStatement({
+        actions: ["s3:GetObject"],
+        resources: [bucket.bucketArn, `${bucket.bucketArn}/*`],
+      }),
+    );
+
+    saveToDBTaskDef.addToTaskRolePolicy(
+      new PolicyStatement({
+        actions: ["ssm:GetParameter"],
+        resources: [ssm.parameterArn],
+      }),
+    );
+
+    saveToDBTaskDef.addToTaskRolePolicy(
+      new PolicyStatement({
+        actions: ["dynamodb:PutItem", "dynamodb:Scan"],
+        resources: [dynamoDB.tableArn],
+      }),
+    );
+
+    const saveToDBContainer = saveToDBTaskDef.addContainer("SaveToDBContainer", {
+      image: ContainerImage.fromDockerImageAsset(imageAsset),
+      logging: LogDriver.awsLogs({ streamPrefix: "SaveToDBConverter" })
+    });
+
+    const saveToDBHandler = new NodejsFunction(this, 'SaveToDBHandler', {
+      entry: resolve(__dirname, './lambda/SaveToDBHandler.ts'),
+      initialPolicy: [
+        new PolicyStatement({
+          actions: ["ecs:RunTask"],
+          resources: [saveToDBTaskDef.taskDefinitionArn],
+        }),
+        new PolicyStatement({
+          actions: ["ecs:StopTask"],
+          resources: [saveToDBTaskDef.taskDefinitionArn],
+        }),
+        new PolicyStatement({
+          actions: ["iam:PassRole"],
+          resources: ["*"],
+        }),
+      ],
+      environment: {
+        CLUSTER_NAME: saveToDBCluster.clusterName,
+        TASK_DEF_ARN: saveToDBTaskDef.taskDefinitionArn,
+        CONTAINER_NAME: saveToDBContainer.containerName,
+        VPC_SUBNET: saveToDBVpc.publicSubnets[0].subnetId,
+      },
+      tracing: Tracing.ACTIVE,
+    });
+
+    saveToDBHandler.addEventSource(new S3EventSource(
+      bucket,
+      {
+        events: [EventType.OBJECT_CREATED_PUT],
+        filters: [{
+          prefix: "convert/stepCount",
         }]
       }
     ));

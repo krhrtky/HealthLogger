@@ -1,7 +1,7 @@
 import com.healthlogger.libs.RecordsToCsvConverter
 import com.healthlogger.libs.XmlToRecordsParser
-import lib.aws.S3Downloader
-import lib.aws.S3Uploader
+import com.healthlogger.libs.file.s3.S3Downloader
+import com.healthlogger.libs.file.s3.S3Uploader
 import org.slf4j.LoggerFactory
 
 fun main(args: Array<String>) {

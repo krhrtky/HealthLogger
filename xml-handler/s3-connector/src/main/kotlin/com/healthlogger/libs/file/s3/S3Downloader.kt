@@ -1,4 +1,4 @@
-package lib.aws
+package com.healthlogger.libs.file.s3
 
 import org.slf4j.LoggerFactory
 import software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider
