@@ -13,6 +13,7 @@ import { Cluster, ContainerImage, FargateTaskDefinition, LogDriver } from "@aws-
 import { Vpc } from "@aws-cdk/aws-ec2";
 import { Tracing } from "@aws-cdk/aws-lambda";
 import { AttributeType, BillingMode, Table } from "@aws-cdk/aws-dynamodb";
+import { DynamoDbDataSource, FieldLogLevel, GraphqlApi, MappingTemplate, Schema } from "@aws-cdk/aws-appsync";
 
 export class HealthLoggerStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -234,6 +235,35 @@ export class HealthLoggerStack extends cdk.Stack {
         }]
       }
     ));
+
+    const graphqlAPI = new GraphqlApi(this, "RecordAPI", {
+      name: "recordAPI",
+      schema: Schema.fromAsset(resolve(__dirname, "./GraphQL/schema.graphql")),
+      logConfig: {
+        fieldLogLevel: FieldLogLevel.ALL,
+        excludeVerboseContent: true,
+      },
+      xrayEnabled: true,
+    });
+
+    const appSync = new DynamoDbDataSource(this, "RecordAPIDataSource", {
+      table: dynamoDB,
+      api: graphqlAPI,
+    });
+
+    appSync.createResolver({
+      typeName: "Query",
+      fieldName: "listStepCounts",
+      requestMappingTemplate: MappingTemplate.fromString(`
+        {
+          "version": "2017-02-28",
+          "operation": "Scan",
+          "limit": $util.defaultIfNull($ctx.args.limit, 20),
+          "nextToken": $util.toJson($util.defaultIfNullOrEmpty($ctx.args.nextToken, null)),
+        }
+      `),
+      responseMappingTemplate: MappingTemplate.dynamoDbResultItem(),
+    });
 
     new cdk.CfnOutput(this, "FileUploadEventSubscribeAPI", {
       value: api.url,

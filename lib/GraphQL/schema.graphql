@@ -1,0 +1,18 @@
+
+type Query {
+    listStepCounts(limit: Int, nextToken: String): StepCountConnection
+}
+
+type StepCount {
+    creationDate: AWSTimestamp!
+    endDate: AWSTimestamp!
+    startDate: AWSTimestamp!
+    unit: String!
+    value: Int!
+}
+
+type StepCountConnection {
+    items: [StepCount]
+    nextToken: String
+}
+
