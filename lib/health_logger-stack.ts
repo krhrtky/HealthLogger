@@ -19,6 +19,9 @@ export class HealthLoggerStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    /*
+     * Trigger file download
+     */
     const queue = new Queue(this, "FileCreateQueue", {
       deliveryDelay: Duration.minutes(1),
     });
@@ -42,8 +45,15 @@ export class HealthLoggerStack extends cdk.Stack {
       proxy: false,
     });
 
+    new cdk.CfnOutput(this, "FileUploadEventSubscribeAPI", {
+      value: api.url,
+    });
+
     const file = api.root.addResource('file');
     file.addMethod("POST");
+    /*
+     * Trigger file download - END
+     */
 
     const bucket = new Bucket(this, "HealthLoggerData", {
       accessControl: BucketAccessControl.PRIVATE,
@@ -70,6 +80,9 @@ export class HealthLoggerStack extends cdk.Stack {
 
     const slackAuthToken = this.node.tryGetContext('slack_auth_token');
 
+    /*
+     * File upload to S3
+     */
     const fileUploadToS3Handler = new NodejsFunction(this, 'FileUploadToS3Handler', {
       functionName: "FileUploadToS3Handler",
       entry: resolve(__dirname, './lambda/FileUploadToS3Handler.ts'),
@@ -85,6 +98,11 @@ export class HealthLoggerStack extends cdk.Stack {
       ],
       tracing: Tracing.ACTIVE,
     });
+
+    fileUploadToS3Handler.addEventSource(new SqsEventSource(queue));
+    /*
+     * File upload to S3 - END
+     */
 
     const imageAsset = new DockerImageAsset(this, "XmlHandler", {
       directory: resolve(__dirname, "../xml-handler"),
@@ -123,7 +141,6 @@ export class HealthLoggerStack extends cdk.Stack {
       logging: LogDriver.awsLogs({ streamPrefix: "XmlToCsvConverter" })
     });
 
-    fileUploadToS3Handler.addEventSource(new SqsEventSource(queue));
 
     const convertToCSVHandler = new NodejsFunction(this, 'ConvertToCSVHandler', {
       entry: resolve(__dirname, './lambda/ConvertToCSVHandler.ts'),
@@ -160,6 +177,9 @@ export class HealthLoggerStack extends cdk.Stack {
         }]
       }
     ));
+    /*
+     * CSV Converter Task - END
+     */
 
     /*
      * Save to DB Task
@@ -235,7 +255,13 @@ export class HealthLoggerStack extends cdk.Stack {
         }]
       }
     ));
+    /*
+     * Save to DB Task - END
+     */
 
+    /*
+     * GraphQL API
+     */
     const graphqlAPI = new GraphqlApi(this, "RecordAPI", {
       name: "recordAPI",
       schema: Schema.fromAsset(resolve(__dirname, "./GraphQL/schema.graphql")),
@@ -264,9 +290,8 @@ export class HealthLoggerStack extends cdk.Stack {
       `),
       responseMappingTemplate: MappingTemplate.dynamoDbResultItem(),
     });
-
-    new cdk.CfnOutput(this, "FileUploadEventSubscribeAPI", {
-      value: api.url,
-    });
+    /*
+     * GraphQL API - END
+     */
   }
 }
