@@ -6,4 +6,4 @@ COPY . ./app
 
 WORKDIR ./app
 
-RUN ./gradlew build
+RUN ./gradlew build --build-cache
