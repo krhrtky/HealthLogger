@@ -1,5 +1,6 @@
 package com.healthlogger.libs.file.s3
 
+import com.healthlogger.libs.file.FileDownloader
 import org.slf4j.LoggerFactory
 import software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider
 import software.amazon.awssdk.core.sync.ResponseTransformer
@@ -12,7 +13,7 @@ import java.io.File
 import java.io.FileOutputStream
 
 
-class S3Downloader {
+class S3Downloader: FileDownloader {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val s3Client = S3Client
         .builder()
@@ -26,7 +27,7 @@ class S3Downloader {
             .credentialsProvider(ContainerCredentialsProvider.builder().build())
             .build()
 
-    fun download(key: String): File {
+    override fun download(key: String): File {
         val bucketName = ssmClient
                 .getParameter(
                         GetParameterRequest

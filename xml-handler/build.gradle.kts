@@ -35,10 +35,10 @@ project(":s3-connector") {
     dependencies {
         implementation(project(":entities"))
         implementation(project(":csv-converter"))
-        implementation(project(":dynamo-db-connector"))
         implementation("software.amazon.awssdk:bom:2.+")
         implementation("software.amazon.awssdk:s3:2.+")
         implementation("software.amazon.awssdk:ssm:2.+")
+        implementation("com.google.cloud:google-cloud-storage:1.113.5")
     }
 }
 

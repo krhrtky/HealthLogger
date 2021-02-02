@@ -1,5 +1,6 @@
 package com.healthlogger.libs.file.s3
 
+import com.healthlogger.libs.file.FileUploader
 import org.slf4j.LoggerFactory
 import software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider
 import software.amazon.awssdk.regions.Region
@@ -9,7 +10,7 @@ import software.amazon.awssdk.services.ssm.SsmClient
 import software.amazon.awssdk.services.ssm.model.GetParameterRequest
 import java.io.File
 
-class S3Uploader {
+class S3Uploader: FileUploader {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val s3Client = S3Client
         .builder()
@@ -23,7 +24,7 @@ class S3Uploader {
             .credentialsProvider(ContainerCredentialsProvider.builder().build())
             .build()
 
-    fun upload(pathName: String, fileName: String, file: File) {
+    override fun upload(pathName: String, fileName: String, file: File) {
         val bucketName = ssmClient.getParameter(GetParameterRequest.builder().name("HealthLoggerDataBucketName").build())
         logger.info(bucketName.parameter().value())
 
