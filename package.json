@@ -24,7 +24,6 @@
   "dependencies": {
     "@aws-cdk/aws-apigateway": "^1.74.0",
     "@aws-cdk/aws-appsync": "^1.74.0",
-    "@aws-cdk/aws-dynamodb": "^1.74.0",
     "@aws-cdk/aws-ec2": "^1.74.0",
     "@aws-cdk/aws-ecr-assets": "^1.74.0",
     "@aws-cdk/aws-ecs": "^1.74.0",
@@ -43,5 +42,18 @@
     "aws-xray-sdk": "^3.2.0",
     "axios": "^0.21.0",
     "source-map-support": "^0.5.19"
+  },
+  "targets": {
+    "cdk-lambda": {
+      "context": "node",
+      "includeNodeModules": {
+        "aws-sdk": false
+      },
+      "sourceMap": false,
+      "minify": false,
+      "engines": {
+        "node": ">= 12"
+      }
+    }
   }
 }

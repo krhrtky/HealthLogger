@@ -10,10 +10,9 @@ import { S3EventSource, SqsEventSource } from "@aws-cdk/aws-lambda-event-sources
 import { StringParameter } from "@aws-cdk/aws-ssm";
 import { DockerImageAsset } from "@aws-cdk/aws-ecr-assets";
 import { Cluster, ContainerImage, FargateTaskDefinition, LogDriver } from "@aws-cdk/aws-ecs";
-import { Vpc } from "@aws-cdk/aws-ec2";
+import { InstanceType, Vpc } from "@aws-cdk/aws-ec2";
 import { Tracing } from "@aws-cdk/aws-lambda";
-import { AttributeType, BillingMode, Table } from "@aws-cdk/aws-dynamodb";
-import { DynamoDbDataSource, FieldLogLevel, GraphqlApi, MappingTemplate, Schema } from "@aws-cdk/aws-appsync";
+import { DatabaseInstance } from "@aws-cdk/aws-rds";
 
 export class HealthLoggerStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -58,19 +57,6 @@ export class HealthLoggerStack extends cdk.Stack {
     const bucket = new Bucket(this, "HealthLoggerData", {
       accessControl: BucketAccessControl.PRIVATE,
       lifecycleRules: [{ expiration: Duration.days(7)}],
-    });
-
-    const dynamoDB = new Table(this, "StepCount", {
-      tableName: "StepCount",
-      partitionKey: {
-        name: "startDate",
-        type: AttributeType.NUMBER,
-      },
-      sortKey: {
-        name: "creationDate",
-        type: AttributeType.NUMBER,
-      },
-      billingMode: BillingMode.PAY_PER_REQUEST,
     });
 
     const ssm = new StringParameter(this, "HealthLoggerDataBucketName", {
@@ -181,6 +167,10 @@ export class HealthLoggerStack extends cdk.Stack {
      * CSV Converter Task - END
      */
 
+    const rds = new DatabaseInstance(this, "HealthLoggerAppDB", {
+      engine: InstanceType.of(Ins)
+    })
+
     /*
      * Save to DB Task
      */
@@ -257,41 +247,6 @@ export class HealthLoggerStack extends cdk.Stack {
     ));
     /*
      * Save to DB Task - END
-     */
-
-    /*
-     * GraphQL API
-     */
-    const graphqlAPI = new GraphqlApi(this, "RecordAPI", {
-      name: "recordAPI",
-      schema: Schema.fromAsset(resolve(__dirname, "./GraphQL/schema.graphql")),
-      logConfig: {
-        fieldLogLevel: FieldLogLevel.ALL,
-        excludeVerboseContent: true,
-      },
-      xrayEnabled: true,
-    });
-
-    const appSync = new DynamoDbDataSource(this, "RecordAPIDataSource", {
-      table: dynamoDB,
-      api: graphqlAPI,
-    });
-
-    appSync.createResolver({
-      typeName: "Query",
-      fieldName: "listStepCounts",
-      requestMappingTemplate: MappingTemplate.fromString(`
-        {
-          "version": "2017-02-28",
-          "operation": "Scan",
-          "limit": $util.defaultIfNull($ctx.args.limit, 20),
-          "nextToken": $util.toJson($util.defaultIfNullOrEmpty($ctx.args.nextToken, null)),
-        }
-      `),
-      responseMappingTemplate: MappingTemplate.dynamoDbResultItem(),
-    });
-    /*
-     * GraphQL API - END
      */
   }
 }
