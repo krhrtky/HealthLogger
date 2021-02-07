@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     kotlin("jvm")
     application
@@ -9,7 +11,8 @@ application {
 
 dependencies {
     implementation(project(":csv-converter"))
-    implementation(project(":s3-connector"))
+    implementation(project(":file"))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 tasks {
@@ -27,3 +30,14 @@ tasks {
     }
 }
 
+repositories {
+    mavenCentral()
+}
+val compileKotlin: KotlinCompile by tasks
+compileKotlin.kotlinOptions {
+    jvmTarget = "1.8"
+}
+val compileTestKotlin: KotlinCompile by tasks
+compileTestKotlin.kotlinOptions {
+    jvmTarget = "1.8"
+}

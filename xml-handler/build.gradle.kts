@@ -31,7 +31,7 @@ subprojects {
     }
 }
 
-project(":s3-connector") {
+project(":file") {
     dependencies {
         implementation(project(":entities"))
         implementation(project(":csv-converter"))
@@ -52,5 +52,3 @@ project(":csv-converter") {
 tasks.test {
     useJUnitPlatform()
 }
-
-

@@ -4,8 +4,9 @@ rootProject.name = "xml-handler"
 include(
     "entities",
     "csv-converter",
-    "s3-connector",
+    "file",
     "save-to-db",
     "xml-to-csv-converter",
-    "dynamo-db-connector"
+    "dynamo-db-connector",
+    "cloud-run:normalizer"
 )
