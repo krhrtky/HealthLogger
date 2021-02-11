@@ -195,13 +195,6 @@ export class HealthLoggerStack extends cdk.Stack {
       }),
     );
 
-    saveToDBTaskDef.addToTaskRolePolicy(
-      new PolicyStatement({
-        actions: ["dynamodb:PutItem", "dynamodb:Scan"],
-        resources: [dynamoDB.tableArn],
-      }),
-    );
-
     const saveToDBContainer = saveToDBTaskDef.addContainer("SaveToDBContainer", {
       image: ContainerImage.fromDockerImageAsset(imageAsset),
       logging: LogDriver.awsLogs({ streamPrefix: "SaveToDBConverter" })
