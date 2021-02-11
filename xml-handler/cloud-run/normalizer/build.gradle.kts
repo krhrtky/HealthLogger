@@ -41,9 +41,17 @@ sourceSets["main"].resources.srcDirs("resources")
 sourceSets["test"].resources.srcDirs("testresources")
 val compileKotlin: KotlinCompile by tasks
 compileKotlin.kotlinOptions {
-    jvmTarget = "1.8"
+    jvmTarget = "11"
 }
 val compileTestKotlin: KotlinCompile by tasks
 compileTestKotlin.kotlinOptions {
-    jvmTarget = "1.8"
+    jvmTarget = "11"
 }
+
+val jar: Jar by tasks
+jar.manifest.attributes["Main-Class"] = "io.ktor.server.netty.EngineMain"
+jar.from(
+    configurations.runtimeClasspath.get().map {
+        if (it.isDirectory) it else zipTree(it)
+    }
+)
