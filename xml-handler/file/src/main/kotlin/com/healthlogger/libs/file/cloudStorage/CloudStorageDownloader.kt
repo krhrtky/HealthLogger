@@ -16,7 +16,7 @@ class CloudStorageDownloader: FileDownloader {
     private val logger = LoggerFactory.getLogger(javaClass)
 
     override fun download(key: String): File {
-        logger.info("Start download file. filePath: $key")
+        logger.info("Start download file. filePath: $bucketName/$key")
 
         val blob = storage.get(BlobId.of(bucketName, key))
         val file = File.createTempFile("tmp", ".tmp")
