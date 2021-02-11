@@ -167,10 +167,6 @@ export class HealthLoggerStack extends cdk.Stack {
      * CSV Converter Task - END
      */
 
-    const rds = new DatabaseInstance(this, "HealthLoggerAppDB", {
-      engine: InstanceType.of(Ins)
-    })
-
     /*
      * Save to DB Task
      */
