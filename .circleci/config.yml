@@ -8,7 +8,8 @@ jobs:
       - checkout
       - node/install-packages:
           app-dir: ./firebase/functions
-      - run: cd ./firebase/functions
+      - run: cd ./firebase
+      - run: npm init -y 
       - run: npm install --save-dev firebase-tools
       - run: ./node_modules/.bin/firebase deploy --token=$FIREBASE_TOKEN
 workflows:
