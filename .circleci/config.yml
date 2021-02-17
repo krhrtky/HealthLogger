@@ -6,6 +6,7 @@ jobs:
     executor: node/default
     steps:
       - checkout
+      - run: ls
       - node/install-packages:
           app-dir: ./firebase/functions
 workflows:
