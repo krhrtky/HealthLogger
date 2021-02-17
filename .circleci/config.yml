@@ -4,15 +4,20 @@ orbs:
 jobs:
   functions-deploy:
     executor: node/default
-    # working_directory: ~/project/firebase
     steps:
       - checkout
       - run: ls
       - node/install-packages:
           app-dir: ~/project/firebase/functions
-      - run: npm init -y 
-      - run: npm install --save-dev firebase-tools
-      - run: ./node_modules/.bin/firebase deploy --token=$FIREBASE_TOKEN
+      - run:
+          command: npm init -y 
+          working_directory: ~/project/firebase
+      - run:
+          command: npm install --save-dev firebase-tools
+          working_directory: ~/project/firebase
+      - run:
+          command: ./node_modules/.bin/firebase deploy --token=$FIREBASE_TOKEN
+          working_directory: ~/project/firebase
 workflows:
   deploy:
     jobs:
