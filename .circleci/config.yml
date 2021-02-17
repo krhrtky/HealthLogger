@@ -4,7 +4,7 @@ orbs:
 jobs:
   functions-deploy:
     executor: node/default
-    working_directory: ~/project/firebase
+    # working_directory: ~/project/firebase
     steps:
       - checkout
       - run: ls
