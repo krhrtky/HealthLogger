@@ -1,0 +1,32 @@
+version: 2.1
+orbs:
+  node: circleci/node@4.1.0
+jobs:
+  functions-deploy:
+    executor: node/default
+    steps:
+      - checkout
+      - run: ls
+      - node/install-packages:
+          app-dir: ~/project/firebase/functions
+      - run:
+          command: npm init -y 
+          working_directory: ~/project/firebase
+      - run:
+          command: npm install --save-dev firebase-tools
+          working_directory: ~/project/firebase
+      - run:
+          command: ./node_modules/.bin/firebase deploy  --only functions --token=$FIREBASE_TOKEN --project=$FIREBASE_PROJECT_ID
+          working_directory: ~/project/firebase
+workflows:
+  deploy:
+    jobs:
+      - node/test:
+         app-dir: ./firebase/functions
+      - functions-deploy:
+          requires:
+            - node/test
+          filters:
+            branches:
+              only:
+                - master
