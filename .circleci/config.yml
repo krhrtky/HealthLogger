@@ -26,3 +26,7 @@ workflows:
       - functions-deploy:
           requires:
             - node/test
+          filters:
+            branches:
+              only:
+                - master
