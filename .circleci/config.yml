@@ -1,6 +1,7 @@
 version: 2.1
 orbs:
   node: circleci/node@4.1.0
+  slack: circleci/slack@4.3.0
 jobs:
   functions-deploy:
     executor: node/default
@@ -10,7 +11,7 @@ jobs:
       - node/install-packages:
           app-dir: ~/project/firebase/functions
       - run:
-          command: npm init -y 
+          command: npm init -y
           working_directory: ~/project/firebase
       - run:
           command: npm install --save-dev firebase-tools
@@ -18,6 +19,12 @@ jobs:
       - run:
           command: ./node_modules/.bin/firebase deploy  --only functions --token=$FIREBASE_TOKEN --project=$FIREBASE_PROJECT_ID
           working_directory: ~/project/firebase
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+      - slack/notify:
+          event: pass
+          template: success_tagged_deploy_1
 workflows:
   deploy:
     jobs:
