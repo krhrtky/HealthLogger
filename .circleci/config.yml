@@ -1,24 +1,86 @@
 version: 2.1
+executors:
+  java:
+    docker:
+      - image: cimg/openjdk:8.0-node
+    working_directory: ~/project
 orbs:
-  node: circleci/node@4.1.0
   slack: circleci/slack@4.3.0
 jobs:
-  functions-deploy:
-    executor: node/default
+  install_deps:
+    executor: java
     steps:
       - checkout
-      - run: ls
-      - node/install-packages:
-          app-dir: ~/project/firebase/functions
+      - restore_cache:
+          keys:
+            - firebase-functions-v1-dependencies{{ checksum "firebase/functions/package-lock.json"}}
+      - run: npm install --prefix firebase/functions
+      - save_cache:
+          paths:
+            - firebase/functions/node_modules
+          key: firebase-functions-v1-dependencies{{ checksum "firebase/functions/package-lock.json" }}
       - run:
           command: npm init -y
-          working_directory: ~/project/firebase
+          working_directory: firebase
+      - persist_to_workspace:
+          root: .
+          paths:
+            - firebase/functions/node_modules/*
+      - run: npm install --save-dev firebase-tools --prefix firebase
+      - restore_cache:
+          keys:
+            - firebase-v1-dependencies
+      - run: firebase/node_modules/.bin/firebase setup:emulators:firestore
+      - save_cache:
+          paths:
+            - ~/.cache/firebase/emulators/
+          key: firebase-v1-dependencies
+      - persist_to_workspace:
+          root: "~"
+          paths:
+            - .cache/firebase/emulators/*
+  lint:
+    executor: java
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ~/project
+      - run: npm run type --prefix firebase/functions
+      - run: npm run lint:src --prefix firebase/functions
+  test:
+    executor: java
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ~/project
+      - attach_workspace:
+          at: "~"
+      - run:
+          command: npm init -y
+          working_directory: firebase
+      - persist_to_workspace:
+          root: .
+          paths:
+            - firebase/functions/node_modules/*
+      - run: npm install --save-dev firebase-tools --prefix firebase
+      - run:
+          command: node_modules/.bin/firebase emulators:exec --only firestore 'npm run jest --prefix functions'
+          working_directory: firebase
+  functions-deploy:
+    executor: java
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          command: npm init -y
+          working_directory: firebase
       - run:
           command: npm install --save-dev firebase-tools
-          working_directory: ~/project/firebase
+          working_directory: firebase
       - run:
           command: ./node_modules/.bin/firebase deploy  --only functions --token=$FIREBASE_TOKEN --project=$FIREBASE_PROJECT_ID
-          working_directory: ~/project/firebase
+          working_directory: firebase
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -28,11 +90,17 @@ jobs:
 workflows:
   deploy:
     jobs:
-      - node/test:
-         app-dir: ./firebase/functions
+      - install_deps
+      - lint:
+          requires:
+            - install_deps
+      - test:
+          requires:
+            - install_deps
       - functions-deploy:
           requires:
-            - node/test
+            - lint
+            - test
           filters:
             branches:
               only:

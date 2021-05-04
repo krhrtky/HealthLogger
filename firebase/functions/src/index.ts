@@ -1,12 +1,10 @@
 import * as functions from "firebase-functions";
-import {PubSub} from "@google-cloud/pubsub";
-import {Storage} from "@google-cloud/storage";
-// eslint-disable-next-line no-unused-vars
-import type {WebAPICallResult} from "@slack/web-api/dist/WebClient";
-import {WebClient} from "@slack/web-api";
-import {default as axios} from "axios";
+import { PubSub } from "@google-cloud/pubsub";
+import { Storage } from "@google-cloud/storage";
+import type { WebAPICallResult } from "@slack/web-api/dist/WebClient";
+import { WebClient } from "@slack/web-api";
+import axios from "axios";
 
-/* eslint-disable camelcase */
 type FileAPICallResult = {
   files: Array<{
     id: string;
@@ -16,11 +14,11 @@ type FileAPICallResult = {
     title: string;
     mimetype: string;
     filetype: string;
-    pretty_type: string,
+    pretty_type: string;
     user: string;
     editable: boolean;
     size: number;
-    mode: string
+    mode: string;
     is_external: boolean;
     external_type: string;
     is_public: boolean;
@@ -37,69 +35,65 @@ type FileAPICallResult = {
     comments_count: number;
   }>;
 } & WebAPICallResult;
-/* eslint-able camelcase */
-
 
 const config = functions.config();
-const bucketName = config.bucket.name as string;
-const topicName = config.topic.name as string;
-const slackAuthToken = config.slack.token as string;
+const bucketName = config.bucket?.name as string;
+const topicName = config.topic?.name as string;
+const slackAuthToken = config.slack?.token as string;
 
-export const fetchAndSaveLatestHealthLog = functions
-    .pubsub
-    .schedule("00 00 * * *")
-    .timeZone("Asia/Tokyo")
-    .onRun(async () => {
-      const client = new WebClient(slackAuthToken);
-      const result = await client.files.list() as FileAPICallResult;
+export const fetchAndSaveLatestHealthLog = functions.pubsub
+  .schedule("00 00 * * *")
+  .timeZone("Asia/Tokyo")
+  .onRun(async () => {
+    const client = new WebClient(slackAuthToken);
+    const result = (await client.files.list()) as FileAPICallResult;
 
-      const latest = result
-          .files
-          .reduce((acc, current) => {
-            return acc.timestamp > current.timestamp ? acc : current;
-          });
+    const latest = result.files.reduce((acc, current) =>
+      acc.timestamp > current.timestamp ? acc : current,
+    );
 
-      functions
-          .logger
-          .info(`Latest file: ${latest.name}, timestamp: ${latest.timestamp}`);
+    functions.logger.info(
+      `Latest file: ${latest.name}, timestamp: ${latest.timestamp}`,
+    );
 
-      const bucket = new Storage().bucket(bucketName);
-      const file = bucket.file(`master/${latest.timestamp}.zip`);
-      const exists = (await file.exists())[0];
+    const bucket = new Storage().bucket(bucketName);
+    const file = bucket.file(`master/${latest.timestamp}.zip`);
+    const exists = (await file.exists())[0];
 
-      if (exists) {
-        functions
-            .logger
-            .info(`Latest file: ${latest.timestamp}.zip already exists.`);
-        return;
-      }
+    if (exists) {
+      functions.logger.info(
+        `Latest file: ${latest.timestamp}.zip already exists.`,
+      );
+      return;
+    }
 
-      await axios.get(latest.url_private_download, {
+    await axios
+      .get(latest.url_private_download, {
         responseType: "stream",
         headers: {
           Authorization: `Bearer ${slackAuthToken}`,
         },
-      }).then((res) => {
+      })
+      .then(res => {
         res.data.pipe(file.createWriteStream());
       });
 
-      return null;
-    });
+    return null;
+  });
 
-export const putObjectTrigger = functions
-    .storage
-    .bucket(bucketName)
-    .object()
-    .onFinalize(async ({name}) => {
-      console.log(`File name: ${name}`);
+export const putObjectTrigger = functions.storage
+  .bucket(bucketName)
+  .object()
+  .onFinalize(async ({ name }) => {
+    functions.logger.info(`File name: ${name}`);
 
-      if (name === undefined) {
-        console.error("Finalized file name is empty.");
-        return;
-      }
-      const pubSub = new PubSub();
+    if (name == null || name === "") {
+      functions.logger.error("Finalized file name is empty.");
+      return;
+    }
+    const pubSub = new PubSub();
 
-      if (name?.startsWith("master/")) {
-        await pubSub.topic(topicName).publish(Buffer.from(name));
-      }
-    });
+    if (name?.startsWith("master/")) {
+      await pubSub.topic(topicName).publish(Buffer.from(name));
+    }
+  });
