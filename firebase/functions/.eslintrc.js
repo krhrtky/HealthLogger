@@ -1,29 +1,91 @@
+const prettierConfig = require("./.prettierrc");
+
 module.exports = {
-  root: true,
   env: {
+    browser: true,
     es6: true,
     node: true,
+    jest: true,
   },
   extends: [
-    "eslint:recommended",
+    "prettier",
     "plugin:import/errors",
     "plugin:import/warnings",
     "plugin:import/typescript",
-    "google",
+    "plugin:eslint-comments/recommended",
+    "plugin:@typescript-eslint/recommended",
   ],
   parser: "@typescript-eslint/parser",
   parserOptions: {
-    project: ["tsconfig.json", "tsconfig.dev.json"],
+    project: "tsconfig.json",
     sourceType: "module",
   },
-  ignorePatterns: [
-    "/lib/**/*", // Ignore built files.
-  ],
-  plugins: [
-    "@typescript-eslint",
-    "import",
-  ],
+  plugins: ["@typescript-eslint", "import", "prettier", "jest"],
   rules: {
-    quotes: ["error", "double"],
+    "eslint-comments/no-unused-disable": "error",
+    "no-debugger": [1],
+    "arrow-body-style": [2, "as-needed"],
+    "arrow-parens": [2, "as-needed"],
+    "@typescript-eslint/adjacent-overload-signatures": "error",
+    "@typescript-eslint/no-empty-function": "error",
+    "@typescript-eslint/no-empty-interface": "warn",
+    "@typescript-eslint/no-floating-promises": "error",
+    "@typescript-eslint/no-namespace": "error",
+    "@typescript-eslint/no-unnecessary-type-assertion": "error",
+    "@typescript-eslint/prefer-for-of": "warn",
+    "@typescript-eslint/triple-slash-reference": "error",
+    "@typescript-eslint/unified-signatures": "warn",
+    "@typescript-eslint/explicit-module-boundary-types": "off",
+    "comma-dangle": ["error", "always-multiline"],
+    "constructor-super": "error",
+    eqeqeq: ["warn", "smart"],
+    "import/no-deprecated": "warn",
+    "import/no-extraneous-dependencies": "error",
+    "import/no-unassigned-import": "warn",
+    "import/no-default-export": "error",
+    "import/no-cycle": "error",
+    "no-cond-assign": "error",
+    "no-duplicate-case": "error",
+    "no-duplicate-imports": "error",
+    "no-empty": [
+      "error",
+      {
+        allowEmptyCatch: true,
+      },
+    ],
+    "no-invalid-this": "error",
+    "no-new-wrappers": "error",
+    "no-param-reassign": "error",
+    "no-redeclare": "error",
+    "no-sequences": "error",
+    "no-shadow": [
+      "error",
+      {
+        hoist: "all",
+      },
+    ],
+    "no-throw-literal": "error",
+    "no-unsafe-finally": "error",
+    "no-unused-labels": "error",
+    "no-var": "warn",
+    "no-void": "error",
+    "prefer-const": "warn",
+    "prettier/prettier": [
+      "error",
+      {
+        ...prettierConfig,
+      },
+    ],
+    "jest/no-disabled-tests": "warn",
+    "jest/valid-expect": "warn",
+    "jest/no-focused-tests": "error",
+    "jest/no-identical-title": "warn",
+  },
+  settings: {
+    jsdoc: {
+      tagNamePreference: {
+        returns: "return",
+      },
+    },
   },
 };
