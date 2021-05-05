@@ -19,13 +19,17 @@ jobs:
           paths:
             - firebase/functions/node_modules
           key: firebase-functions-v1-dependencies{{ checksum "firebase/functions/package-lock.json" }}
-      - run:
-          command: npm init -y
-          working_directory: firebase
       - persist_to_workspace:
           root: .
           paths:
             - firebase/functions/node_modules/*
+  install_firebase_emulator:
+    executor: java
+    steps:
+      - checkout
+      - run:
+          command: npm init -y
+          working_directory: firebase
       - run: npm install --save-dev firebase-tools --prefix firebase
       - restore_cache:
           keys:
@@ -71,7 +75,7 @@ jobs:
     steps:
       - checkout
       - attach_workspace:
-          at: .
+          at: ~/project
       - run:
           command: npm init -y
           working_directory: firebase
@@ -88,15 +92,18 @@ jobs:
           event: pass
           template: success_tagged_deploy_1
 workflows:
-  deploy:
+  ordinary:
     jobs:
       - install_deps
+      - install_firebase_emulator
       - lint:
           requires:
             - install_deps
+            - install_firebase_emulator
       - test:
           requires:
             - install_deps
+            - install_firebase_emulator
       - functions-deploy:
           requires:
             - lint
