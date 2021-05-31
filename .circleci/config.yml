@@ -111,7 +111,7 @@ jobs:
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "*When*:\n$(TZ=-9 date +'%m/%d/%Y %T')"
+                      "text": "*When*:\n$(date +'%m/%d/%Y %T')"
                     }
                   ]
                 },
